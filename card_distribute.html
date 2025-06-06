@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Dealing Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #0f4c3a, #1a5d4a);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            height: 90vh;
+            position: relative;
+        }
+
+        /* Setup Screen */
+        .setup-screen {
+            text-align: center;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 40px;
+            border-radius: 15px;
+            border: 2px solid #ffd700;
+        }
+
+        .setup-screen h1 {
+            color: #ffd700;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .player-selector {
+            margin: 30px 0;
+        }
+
+        .player-selector label {
+            font-size: 1.2em;
+            margin-right: 15px;
+        }
+
+        .player-selector select {
+            padding: 10px 15px;
+            font-size: 1.1em;
+            border-radius: 5px;
+            border: none;
+            background: #333;
+            color: white;
+        }
+
+        .start-btn {
+            background: linear-gradient(45deg, #ffd700, #ffed4a);
+            color: #333;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .start-btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* Game Table */
+        .game-table {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: radial-gradient(ellipse at center, #2d5a3d, #1a4d2e);
+            border-radius: 50px;
+            border: 8px solid #8b4513;
+        }
+
+        /* Deck Position */
+        .deck-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+
+        .deck {
+            width: 80px;
+            height: 120px;
+            background: linear-gradient(45deg, #1a237e, #3949ab);
+            border-radius: 8px;
+            border: 2px solid #ffd700;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .deck::after {
+            content: '🂠';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2em;
+            color: #ffd700;
+        }
+
+        .deck-count {
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            color: #ffd700;
+        }
+
+        /* Player Positions */
+        .player {
+            position: absolute;
+            width: 150px;
+            height: 100px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            border: 2px solid #ffd700;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .player.active {
+            border-color: #00ff00;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+        }
+
+        .player-name {
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 5px;
+        }
+
+        .card-count {
+            color: white;
+            font-size: 0.9em;
+        }
+
+        .player-cards {
+            position: absolute;
+            bottom: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: -20px;
+        }
+
+        /* Player Positioning */
+        .player-1 { bottom: 20px; left: 50%; transform: translateX(-50%); }
+        .player-2 { top: 20px; left: 50%; transform: translateX(-50%); }
+        .player-3 { right: 20px; top: 50%; transform: translateY(-50%); }
+        .player-4 { left: 20px; top: 50%; transform: translateY(-50%); }
+        .player-5 { bottom: 20px; right: 20%; }
+        .player-6 { bottom: 20px; left: 20%; }
+
+        /* Card Animation */
+        .card {
+            width: 60px;
+            height: 90px;
+            background: linear-gradient(45deg, #ffffff, #f0f0f0);
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            z-index: 5;
+        }
+
+        .card.dealing {
+            animation: dealCard 0.8s ease-in-out forwards;
+        }
+
+        @keyframes dealCard {
+            0% {
+                transform: translate(-50%, -50%) scale(1) rotate(0deg);
+                opacity: 1;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(0.8) rotate(180deg);
+                opacity: 0.8;
+            }
+            100% {
+                opacity: 1;
+                transform: scale(0.8) rotate(0deg);
+            }
+        }
+
+        /* Control Panel */
+        .control-panel {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: none;
+            gap: 10px;
+        }
+
+        .control-btn {
+            background: rgba(0, 0, 0, 0.8);
+            color: #ffd700;
+            border: 2px solid #ffd700;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .control-btn:hover {
+            background: #ffd700;
+            color: #333;
+        }
+
+        /* Status Display */
+        .status-display {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 30px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+
+        .status-text {
+            color: #ffd700;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .progress-bar {
+            width: 200px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ffd700, #ffed4a);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .setup-screen {
+                padding: 20px;
+                width: 90%;
+            }
+            
+            .player {
+                width: 120px;
+                height: 80px;
+                font-size: 0.9em;
+            }
+            
+            .deck {
+                width: 60px;
+                height: 90px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Setup Screen -->
+        <div class="setup-screen" id="setupScreen">
+            <h1>🎮 Card Game Setup</h1>
+            <div class="player-selector">
+                <label for="playerCount">Number of Players:</label>
+                <select id="playerCount">
+                    <option value="2">2 Players</option>
+                    <option value="3">3 Players</option>
+                    <option value="4">4 Players</option>
+                    <option value="5">5 Players</option>
+                    <option value="6">6 Players</option>
+                </select>
+            </div>
+            <button class="start-btn" onclick="startGame()">🎯 Start Dealing</button>
+        </div>
+
+        <!-- Game Table -->
+        <div class="game-table" id="gameTable">
+            <!-- Deck -->
+            <div class="deck-container">
+                <div class="deck" id="deck">
+                    <div class="deck-count" id="deckCount">52 Cards</div>
+                </div>
+            </div>
+
+            <!-- Status Display -->
+            <div class="status-display" id="statusDisplay">
+                <div class="status-text" id="statusText">Dealing Cards...</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+
+            <!-- Control Panel -->
+            <div class="control-panel" id="controlPanel">
+                <button class="control-btn" onclick="resetGame()">🔄 New Game</button>
+                <button class="control-btn" onclick="dealAgain()">🎲 Deal Again</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            playerCount: 2,
+            cardsPerPlayer: 5,
+            dealingSpeed: 600,
+            currentCard: 0,
+            totalCards: 0,
+            isDealing: false,
+            deckSize: 52
+        };
+
+        function startGame() {
+            gameState.playerCount = parseInt(document.getElementById('playerCount').value);
+            gameState.totalCards = gameState.playerCount * gameState.cardsPerPlayer;
+            
+            // Hide setup screen and show game table
+            document.getElementById('setupScreen').style.display = 'none';
+            document.getElementById('gameTable').style.display = 'block';
+            document.getElementById('statusDisplay').style.display = 'block';
+            
+            // Create players
+            createPlayers();
+            
+            // Start dealing after a short delay
+            setTimeout(() => {
+                startDealing();
+            }, 500);
+        }
+
+        function createPlayers() {
+            // Clear existing players
+            const existingPlayers = document.querySelectorAll('.player');
+            existingPlayers.forEach(player => player.remove());
+            
+            // Create new players
+            for (let i = 1; i <= gameState.playerCount; i++) {
+                const player = document.createElement('div');
+                player.className = `player player-${i}`;
+                player.innerHTML = `
+                    <div class="player-name">Player ${i}</div>
+                    <div class="card-count" id="count-${i}">0 cards</div>
+                    <div class="player-cards" id="cards-${i}"></div>
+                `;
+                document.getElementById('gameTable').appendChild(player);
+            }
+        }
+
+        function startDealing() {
+            gameState.isDealing = true;
+            gameState.currentCard = 0;
+            
+            updateStatus("Dealing Cards...");
+            updateDeckCount();
+            
+            // Deal cards in rounds
+            dealNextCard();
+        }
+
+        function dealNextCard() {
+            if (gameState.currentCard >= gameState.totalCards) {
+                finishDealing();
+                return;
+            }
+            
+            const currentRound = Math.floor(gameState.currentCard / gameState.playerCount);
+            const currentPlayer = (gameState.currentCard % gameState.playerCount) + 1;
+            
+            // Highlight current player
+            highlightPlayer(currentPlayer);
+            
+            // Create and animate card
+            createDealingCard(currentPlayer, currentRound);
+            
+            // Update progress
+            updateProgress();
+            
+            // Update deck count
+            gameState.deckSize--;
+            updateDeckCount();
+            
+            gameState.currentCard++;
+            
+            // Schedule next card
+            setTimeout(() => {
+                dealNextCard();
+            }, gameState.dealingSpeed);
+        }
+
+        function createDealingCard(playerNum, cardIndex) {
+            const card = document.createElement('div');
+            card.className = 'card dealing';
+            
+            // Start from deck position
+            const deckRect = document.getElementById('deck').getBoundingClientRect();
+            const tableRect = document.getElementById('gameTable').getBoundingClientRect();
+            
+            card.style.left = '50%';
+            card.style.top = '50%';
+            
+            document.getElementById('gameTable').appendChild(card);
+            
+            // Get target player position
+            const player = document.querySelector(`.player-${playerNum}`);
+            const playerRect = player.getBoundingClientRect();
+            
+            // Calculate relative position
+            const targetX = ((playerRect.left + playerRect.width/2) - (tableRect.left + tableRect.width/2));
+            const targetY = ((playerRect.top + playerRect.height/2) - (tableRect.top + tableRect.height/2));
+            
+            // Animate card to player
+            setTimeout(() => {
+                card.style.transform = `translate(${targetX}px, ${targetY}px) scale(0.8)`;
+                card.style.transition = 'all 0.5s ease-in-out';
+            }, 50);
+            
+            // Add card to player's area and update count
+            setTimeout(() => {
+                addCardToPlayer(playerNum, cardIndex);
+                card.remove();
+            }, 550);
+        }
+
+        function addCardToPlayer(playerNum, cardIndex) {
+            const cardsContainer = document.getElementById(`cards-${playerNum}`);
+            const cardCount = document.getElementById(`count-${playerNum}`);
+            
+            // Create small card in player area
+            const playerCard = document.createElement('div');
+            playerCard.className = 'card';
+            playerCard.style.position = 'relative';
+            playerCard.style.width = '40px';
+            playerCard.style.height = '60px';
+            playerCard.style.marginLeft = cardIndex > 0 ? '-15px' : '0';
+            playerCard.style.zIndex = cardIndex;
+            
+            cardsContainer.appendChild(playerCard);
+            
+            // Update card count
+            const currentCount = cardsContainer.children.length;
+            cardCount.textContent = `${currentCount} card${currentCount !== 1 ? 's' : ''}`;
+        }
+
+        function highlightPlayer(playerNum) {
+            // Remove highlight from all players
+            document.querySelectorAll('.player').forEach(player => {
+                player.classList.remove('active');
+            });
+            
+            // Highlight current player
+            document.querySelector(`.player-${playerNum}`).classList.add('active');
+        }
+
+        function updateProgress() {
+            const progress = (gameState.currentCard / gameState.totalCards) * 100;
+            document.getElementById('progressFill').style.width = `${progress}%`;
+        }
+
+        function updateDeckCount() {
+            document.getElementById('deckCount').textContent = `${gameState.deckSize} Cards`;
+        }
+
+        function updateStatus(message) {
+            document.getElementById('statusText').textContent = message;
+        }
+
+        function finishDealing() {
+            gameState.isDealing = false;
+            
+            // Remove highlight from all players
+            document.querySelectorAll('.player').forEach(player => {
+                player.classList.remove('active');
+            });
+            
+            updateStatus("✅ All cards dealt! Game ready to start.");
+            
+            // Show control panel
+            document.getElementById('controlPanel').style.display = 'flex';
+            
+            // Hide progress bar after a delay
+            setTimeout(() => {
+                document.getElementById('statusDisplay').style.display = 'none';
+            }, 2000);
+        }
+
+        function resetGame() {
+            // Reset game state
+            gameState.deckSize = 52;
+            gameState.currentCard = 0;
+            gameState.isDealing = false;
+            
+            // Clear all cards from players
+            document.querySelectorAll('.player-cards').forEach(container => {
+                container.innerHTML = '';
+            });
+            
+            // Reset card counts
+            document.querySelectorAll('.card-count').forEach(count => {
+                count.textContent = '0 cards';
+            });
+            
+            // Reset deck count
+            updateDeckCount();
+            
+            // Reset progress
+            document.getElementById('progressFill').style.width = '0%';
+            
+            // Hide control panel
+            document.getElementById('controlPanel').style.display = 'none';
+            
+            // Show setup screen
+            document.getElementById('gameTable').style.display = 'none';
+            document.getElementById('setupScreen').style.display = 'block';
+        }
+
+        function dealAgain() {
+            // Clear existing cards
+            document.querySelectorAll('.player-cards').forEach(container => {
+                container.innerHTML = '';
+            });
+            
+            // Reset card counts
+            document.querySelectorAll('.card-count').forEach(count => {
+                count.textContent = '0 cards';
+            });
+            
+            // Reset game state
+            gameState.deckSize = 52;
+            gameState.currentCard = 0;
+            updateDeckCount();
+            
+            // Hide control panel
+            document.getElementById('controlPanel').style.display = 'none';
+            
+            // Start dealing again
+            setTimeout(() => {
+                startDealing();
+            }, 500);
+        }
+
+        // Initialize deck count on load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDeckCount();
+        });
+    </script>
+</body>
+</html>
